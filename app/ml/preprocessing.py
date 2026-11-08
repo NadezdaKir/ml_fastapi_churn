@@ -1,5 +1,7 @@
 from sklearn.model_selection import train_test_split
 
+from app.core.errors import ChurnServiceError
+
 TARGET = "churn"
 
 NUMERIC_FEATURES = [
@@ -17,6 +19,8 @@ CATEGORICAL_FEATURES = [
     "payment_method",
 ]
 
+FEATURE_COLUMNS = NUMERIC_FEATURES + CATEGORICAL_FEATURES
+
 
 def prepare_data(df):
     df = df.copy()
@@ -24,7 +28,7 @@ def prepare_data(df):
     df[CATEGORICAL_FEATURES] = df[CATEGORICAL_FEATURES].fillna(
         df[CATEGORICAL_FEATURES].mode().iloc[0]
     )
-    X = df[NUMERIC_FEATURES + CATEGORICAL_FEATURES]
+    X = df[FEATURE_COLUMNS]
     y = df[TARGET]
     return X, y
 
@@ -33,6 +37,19 @@ def split_data(X, y, test_size=0.2, random_state=42):
     return train_test_split(
         X, y, test_size=test_size, random_state=random_state, stratify=y
     )
+
+
+def prepare_and_split(df):
+    try:
+        X, y = prepare_data(df)
+        return split_data(X, y)
+    except (KeyError, ValueError) as error:
+        raise ChurnServiceError(
+            400,
+            "data_preparation_error",
+            "failed to prepare dataset",
+            {"reason": str(error)},
+        )
 
 
 def class_distribution(y):
